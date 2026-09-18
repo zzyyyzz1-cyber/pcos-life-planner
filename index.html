@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#176b87">
+  <meta name="description" content="结合课程、组会、饮食和运动安排的可编辑生活课表">
+  <title>我的生活课表</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23176b87'/%3E%3Cpath d='M16 20h32v28H16z' fill='white'/%3E%3Cpath d='M16 28h32M25 20v28M39 20v28' stroke='%23176b87' stroke-width='3'/%3E%3Ccircle cx='43' cy='43' r='7' fill='%23f39c5a'/%3E%3C/svg%3E">
+  <style>
+    :root{
+      --ink:#17313b;--muted:#667983;--line:#dbe5e8;--paper:#f4f8f9;--white:#fff;
+      --brand:#176b87;--brand-dark:#0d526a;--brand-soft:#e4f2f6;
+      --class:#ddecff;--class-line:#6ea3d8;--meal:#fff0de;--meal-line:#e79a47;
+      --move:#dff5e9;--move-line:#4ea676;--rest:#efe9ff;--rest-line:#8d74cc;
+      --meeting:#ffe4e2;--meeting-line:#df6f67;--personal:#e8f0ef;--personal-line:#688b86;--shadow:0 12px 34px rgba(31,61,72,.10);
+      font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;color:var(--ink);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);font-size:16px}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh}
+    .topbar{position:sticky;top:0;z-index:20;background:rgba(244,248,249,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .top-inner{max-width:1320px;margin:auto;padding:16px 18px 12px}
+    .title-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    h1{font-size:1.35rem;margin:0;font-weight:700;letter-spacing:.01em}
+    .header-chips{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+    .sleep-chip,.clock-chip{display:flex;align-items:center;gap:8px;color:var(--brand-dark);background:var(--brand-soft);padding:8px 12px;border-radius:12px;font-size:.9rem;white-space:nowrap}
+    .clock-chip{background:var(--white);border:1px solid var(--line)}
+    .week-controls{display:grid;grid-template-columns:auto minmax(210px,1fr) auto auto;gap:10px;align-items:center;margin-top:14px}
+    .icon-btn,.today-btn,.segment button,.tab-btn,.close-btn,.soft-btn{border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:12px;min-height:42px;padding:8px 13px}
+    .icon-btn{width:42px;padding:0;font-size:1.25rem}
+    .date-wrap{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:7px 12px;min-height:42px}
+    .date-wrap strong{white-space:nowrap}
+    .date-wrap input{width:128px;border:0;background:transparent;color:var(--muted)}
+    .mode-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+    .segment{display:inline-flex;background:#e8eff1;border-radius:12px;padding:3px}
+    .segment button{border:0;background:transparent;min-height:36px;padding:6px 14px}
+    .segment button.active{background:var(--white);color:var(--brand-dark);box-shadow:0 2px 8px rgba(28,64,78,.12)}
+    .save-note{color:var(--muted);font-size:.85rem}
+    .tabs{max-width:1320px;margin:18px auto 0;padding:0 18px;display:flex;gap:8px}
+    .tab-btn{border-color:transparent;background:transparent}
+    .tab-btn.active{background:var(--brand);color:#fff}
+    main{max-width:1320px;margin:12px auto 40px;padding:0 18px}
+    .panel[hidden]{display:none}
+    .tip{display:flex;gap:10px;align-items:center;margin:12px 0;color:var(--muted);font-size:.9rem}
+    .schedule-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;flex-wrap:wrap}
+    .schedule-tools .tip{margin:0}
+    .tool-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);flex:none}
+    .calendar-shell{background:var(--white);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+    .calendar-scroll{overflow:auto;max-height:76vh}
+    .calendar{position:relative;min-width:1040px;display:grid;grid-template-columns:64px repeat(7,minmax(132px,1fr));grid-template-rows:58px 840px}
+    .corner{position:sticky;left:0;top:0;z-index:8;background:#f7fafb;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+    .day-head{position:sticky;top:0;z-index:7;background:#f7fafb;border-bottom:1px solid var(--line);padding:9px 6px;text-align:center}
+    .day-head strong{display:block;font-size:.95rem}
+    .day-head span{display:block;color:var(--muted);font-size:.8rem;margin-top:4px}
+    .day-head.today{background:var(--brand-soft);color:var(--brand-dark)}
+    .time-axis{position:sticky;left:0;z-index:5;background:#f7fafb;border-right:1px solid var(--line);grid-column:1;grid-row:2;position:sticky}
+    .time-label{position:absolute;right:9px;transform:translateY(-50%);font-size:.75rem;color:var(--muted)}
+    .day-column{grid-row:2;position:relative;border-right:1px solid var(--line);background:
+      repeating-linear-gradient(to bottom,transparent 0,transparent 29px,#edf2f3 30px),
+      repeating-linear-gradient(to bottom,transparent 0,transparent 59px,#dfe8ea 60px)}
+    .day-column.drag-over{background-color:#edf8fb}
+    .event{position:absolute;left:5px;right:5px;border-left:4px solid;border-radius:9px;padding:5px 6px;overflow:hidden;text-align:left;box-shadow:0 2px 5px rgba(38,65,75,.08);user-select:none}
+    .event strong{display:block;font-size:.78rem;line-height:1.2}
+    .event small{display:block;font-size:.69rem;color:#52646d;margin-top:2px}
+    .event.class{background:var(--class);border-color:var(--class-line)}
+    .event.meal{background:var(--meal);border-color:var(--meal-line)}
+    .event.exercise{background:var(--move);border-color:var(--move-line)}
+    .event.rest{background:var(--rest);border-color:var(--rest-line)}
+    .event.meeting{background:var(--meeting);border-color:var(--meeting-line)}
+    .event.personal{background:var(--personal);border-color:var(--personal-line)}
+    .event:focus-visible{outline:3px solid var(--brand);outline-offset:1px}
+    .event.dragging{opacity:.45}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .card{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 8px 22px rgba(31,61,72,.07)}
+    .card h2,.card h3{margin:0 0 12px}
+    .card h2{font-size:1.1rem}.card h3{font-size:1rem}
+    .formula{color:var(--brand-dark);font-weight:700;line-height:1.7}
+    .food-list,.plain-list{margin:0;padding-left:1.2rem;color:#415861;line-height:1.8}
+    .food-table{width:100%;border-collapse:collapse}
+    .food-table th,.food-table td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+    .food-table th{color:var(--muted);font-size:.88rem}
+    .workout-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .workout{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:18px}
+    .workout-header{display:flex;justify-content:space-between;gap:12px;align-items:start}
+    .badge{font-size:.78rem;padding:5px 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand-dark);white-space:nowrap}
+    .sheet-backdrop{position:fixed;inset:0;background:rgba(10,35,43,.42);z-index:50;display:flex;justify-content:flex-end}
+    .sheet-backdrop[hidden]{display:none}
+    .sheet{width:min(440px,100%);height:100%;background:var(--white);padding:22px;overflow:auto;box-shadow:-20px 0 50px rgba(0,0,0,.15)}
+    .sheet-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .sheet h2{font-size:1.25rem;margin:0}
+    .close-btn{width:42px;padding:0;font-size:1.2rem}
+    .detail-time{color:var(--muted);margin:8px 0 18px}
+    .detail-box{background:var(--paper);border-radius:14px;padding:14px;margin:12px 0;line-height:1.7}
+    .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+    label{display:grid;gap:6px;color:var(--muted);font-size:.88rem}
+    select,input[type=time],input[type=text],textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit}
+    textarea{min-height:92px;resize:vertical;line-height:1.55}
+    .full-field{grid-column:1/-1}
+    .sheet-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+    .primary-btn{border:0;background:var(--brand);color:#fff;border-radius:12px;padding:11px 16px;min-height:44px}
+    .danger-btn{border:1px solid #e2a3a0;background:#fff5f4;color:#a33b35;border-radius:12px;padding:10px 14px;min-height:42px}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .notice{border-left:4px solid var(--meal-line);background:#fff7ed;border-radius:10px;padding:12px 14px;color:#6f573b;line-height:1.6}
+    @media(max-width:760px){
+      .top-inner{padding:13px 12px 10px}
+      .title-row{align-items:flex-start;flex-direction:column}.header-chips{justify-content:flex-start}.sleep-chip,.clock-chip{font-size:.78rem;padding:7px 9px}
+      .week-controls{grid-template-columns:42px 1fr 42px}.today-btn{grid-column:1/-1}
+      .date-wrap{justify-content:space-between}.date-wrap input{width:120px}
+      .mode-row{align-items:flex-start;flex-direction:column}
+      .tabs,main{padding-left:12px;padding-right:12px}
+      .tabs{overflow:auto}.tab-btn{white-space:nowrap}
+      .grid,.workout-grid{grid-template-columns:1fr}
+      .calendar-scroll{max-height:72vh}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="top-inner">
+      <div class="title-row">
+        <h1>我的生活课表</h1>
+        <div class="header-chips">
+          <div class="clock-chip" id="beijingClock" aria-live="polite">北京时间</div>
+          <div class="sleep-chip" aria-label="作息锚点">☾ 00:15 睡 · 08:15 起</div>
+        </div>
+      </div>
+      <div class="week-controls">
+        <button class="icon-btn" id="prevWeek" aria-label="上一周">‹</button>
+        <div class="date-wrap">
+          <strong id="weekLabel"></strong>
+          <input id="weekPicker" type="date" aria-label="选择日期">
+        </div>
+        <button class="icon-btn" id="nextWeek" aria-label="下一周">›</button>
+        <button class="today-btn" id="todayBtn">回到本周</button>
+      </div>
+      <div class="mode-row">
+        <div class="segment" role="group" aria-label="周类型">
+          <button id="normalMode" class="active" aria-pressed="true">非组会周</button>
+          <button id="meetingMode" aria-pressed="false">组会周</button>
+        </div>
+        <span class="save-note" id="autoNote">修改只保存在你的当前设备</span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="页面板块">
+    <button class="tab-btn active" data-tab="schedule">周日程</button>
+    <button class="tab-btn" data-tab="food">饮食参考</button>
+    <button class="tab-btn" data-tab="exercise">运动安排</button>
+  </nav>
+
+  <main>
+    <section class="panel" id="schedulePanel">
+      <div class="schedule-tools">
+        <div class="tip"><span class="dot"></span><span>点击时间块查看详情或修改；电脑端也可直接拖动。</span></div>
+        <div class="tool-actions">
+          <button class="primary-btn" id="addEvent">＋ 新增安排</button>
+          <button class="soft-btn" id="resetWeek">恢复本周模板</button>
+        </div>
+      </div>
+      <div class="calendar-shell">
+        <div class="calendar-scroll">
+          <div class="calendar" id="calendar"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="foodPanel" hidden>
+      <div class="tip"><span class="dot"></span><span>不用计算热量，每餐按结构选择；买不到时使用同类替换。</span></div>
+      <div class="grid">
+        <article class="card">
+          <h2>早餐</h2>
+          <p class="formula">蛋白质＋主食＋饮品</p>
+          <ul class="food-list">
+            <li>鸡蛋1～2个＋豆浆＋肉包</li>
+            <li>鸡蛋2个＋豆浆＋玉米或红薯</li>
+            <li>鸡蛋＋豆浆＋烧卖或馒头</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>午餐和晚餐</h2>
+          <p class="formula">一掌蛋白质＋一拳主食＋一至两拳蔬菜</p>
+          <ul class="food-list">
+            <li>糙米饭＋鱼/虾/鸡肉＋绿叶菜</li>
+            <li>牛肉粿条或牛腩米线＋鸡蛋/青菜</li>
+            <li>打抛饭或焗饭＋额外一份蔬菜</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>训练加餐</h2>
+          <p class="formula">训练前60～90分钟，小份碳水＋蛋白质</p>
+          <ul class="food-list">
+            <li>常温豆浆＋小包坚果</li>
+            <li>豆浆＋半个或一个包子</li>
+            <li>低乳糖牛奶/酸奶＋水果</li>
+            <li>水果＋鸡蛋</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>宿舍常备</h2>
+          <p class="formula">不依赖冰箱的应急组合</p>
+          <ul class="food-list">
+            <li>5～7盒常温豆浆或低乳糖牛奶</li>
+            <li>4～5包独立包装坚果</li>
+            <li>水果当天购买；莓果每周一次即可</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>外卖选择</h2>
+          <p class="formula">先找蛋白质，再确认主食和蔬菜</p>
+          <ul class="food-list">
+            <li>白灼虾和烤蔬菜要加米饭或薯类</li>
+            <li>轻食要保留足量主食，不能只有沙拉</li>
+            <li>汉堡、薯条、焗饭可以吃，不补偿性节食</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>不用强迫自己</h2>
+          <p class="formula">没有“多囊专属禁食清单”</p>
+          <ul class="food-list">
+            <li>不爱香蕉就选苹果、橙子、梨或莓果</li>
+            <li>不必生酮、戒碳水或只吃低脂食物</li>
+            <li>训练日尤其不要空腹或少吃晚餐</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" id="exercisePanel" hidden>
+      <div class="tip"><span class="dot"></span><span>标准周为两次力量、一次体育游泳、一次普拉提；疲劳时用替换，不叠加。</span></div>
+      <div class="workout-grid">
+        <article class="workout">
+          <div class="workout-header"><div><h2>力量 A</h2><p>周一 · 臀腿＋核心</p></div><span class="badge">45～60分钟</span></div>
+          <ol class="plain-list">
+            <li>热身步行或单车 5～8分钟</li>
+            <li>六角杠硬拉 3×6～10</li>
+            <li>臀推或臀桥 3×8～12</li>
+            <li>高脚杯深蹲或腿举 2～3×8～12</li>
+            <li>台阶上步或反向弓步 2×8/侧</li>
+            <li>Dead bug 2～3×8/侧</li>
+            <li>仰卧起坐练习 2组，不做到力竭</li>
+          </ol>
+        </article>
+        <article class="workout">
+          <div class="workout-header"><div><h2>力量 B</h2><p>周三 · 肩背＋臀＋核心</p></div><span class="badge">45～60分钟</span></div>
+          <ol class="plain-list">
+            <li>哑铃卧推 3×8～12</li>
+            <li>坐姿划船 3×8～12</li>
+            <li>侧平举 2～3×10～15</li>
+            <li>Y-T-W 每个姿势6～10次</li>
+            <li>臀桥或髋外展 3×10～15</li>
+            <li>侧平板/鸟狗式 2组/侧</li>
+            <li>仰卧起坐练习 2组，不做到力竭</li>
+          </ol>
+        </article>
+        <article class="workout">
+          <div class="workout-header"><div><h2>游泳</h2><p>周二体育课</p></div><span class="badge">16:30–18:10</span></div>
+          <ul class="plain-list">
+            <li>体育课计入本周有氧，不需额外跑步</li>
+            <li>组会日提前带泳具和加餐</li>
+            <li>体育课取消时，可预约独立游泳替代</li>
+          </ul>
+        </article>
+        <article class="workout">
+          <div class="workout-header"><div><h2>普拉提</h2><p>周六优先，周四备用</p></div><span class="badge">每周1节</span></div>
+          <ul class="plain-list">
+            <li>优先预约周六上午或下午</li>
+            <li>约不到时改周四10:00或12:15附近时段</li>
+            <li>告诉教练有轻微脊柱侧弯</li>
+            <li>明显疲劳时替代周三力量训练，不额外叠加</li>
+          </ul>
+        </article>
+      </div>
+      <div class="notice" style="margin-top:16px">经期没有明显不适可以正常运动；感觉虚时降低重量、少做一组。出现头晕、大量出血或明显疼痛时休息并及时就医。</div>
+    </section>
+  </main>
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop" hidden>
+  <aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="sheet-top">
+      <h2 id="detailTitle">编辑安排</h2>
+      <button class="close-btn" id="closeSheet" aria-label="关闭">×</button>
+    </div>
+    <div class="detail-time" id="detailTime"></div>
+    <div class="detail-box" id="detailContent"></div>
+    <div class="edit-grid">
+      <label class="full-field">安排名称
+        <input id="editTitle" type="text" maxlength="40" placeholder="例如：图书馆学习">
+      </label>
+      <label class="full-field">分类颜色
+        <select id="editType">
+          <option value="class">课程</option>
+          <option value="meal">饮食 / 加餐</option>
+          <option value="exercise">运动</option>
+          <option value="rest">休息</option>
+          <option value="personal">个人安排</option>
+        </select>
+      </label>
+      <label>星期
+        <select id="editDay"></select>
+      </label>
+      <span></span>
+      <label>开始时间
+        <input id="editStart" type="time" step="300">
+      </label>
+      <label>结束时间
+        <input id="editEnd" type="time" step="300">
+      </label>
+      <label class="full-field">备注（可选）
+        <textarea id="editNotes" maxlength="240" placeholder="地点、准备物品或给自己的提醒"></textarea>
+      </label>
+    </div>
+    <div class="sheet-actions">
+      <button class="primary-btn" id="saveEvent">保存</button>
+      <button class="soft-btn" id="duplicateEvent">复制</button>
+      <button class="soft-btn" id="resetEvent">恢复默认</button>
+      <button class="danger-btn" id="deleteEvent">删除</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var DAYS=["周一","周二","周三","周四","周五","周六","周日"];
+  var START_MIN=8*60, END_MIN=22*60, HEIGHT=840;
+  var meetingDates=["2026-09-15","2026-09-29","2026-10-13","2026-10-27","2026-11-12","2026-11-26","2026-12-10","2026-12-24","2027-01-07"];
+  var content={
+    breakfast:"食堂优先：鸡蛋1～2个＋豆浆＋肉包，或鸡蛋＋豆浆＋玉米/红薯。来不及时用常温豆浆＋坚果，并在路上补鸡蛋或包子。",
+    lunch:"先找鱼、虾、鸡肉、牛肉、鸡蛋或豆腐，再配正常份量主食和一份蔬菜。轻食不能只有沙拉。",
+    dinner:"训练后保留主食和蛋白质。可选清蒸鱼饭、白灼虾＋米饭、牛肉米线、打抛饭或有明确肉类的焗饭。",
+    snack:"训练前60～90分钟：豆浆＋坚果、豆浆＋包子、低乳糖牛奶/酸奶＋水果，任选一种即可。",
+    rest:"能睡就定时20～25分钟；宿舍吵时戴眼罩安静躺卧，不强求睡着，15:00以后不补长觉。",
+    strengthA:"臀腿＋核心：六角杠硬拉、臀推/臀桥、高脚杯深蹲或腿举、台阶上步、Dead bug、仰卧起坐练习。",
+    strengthB:"肩背＋臀＋核心：哑铃卧推、坐姿划船、侧平举、Y-T-W、臀桥或髋外展、侧平板/鸟狗式、仰卧起坐练习。",
+    swimming:"体育课计入本周有氧。组会日提前带泳具和加餐；下课后直接去食堂吃晚餐。",
+    pilates:"每周一节，周六优先、周四备用。明显疲劳时可替代周三力量，不要再额外补练。",
+    meeting:"组会14:00～16:00。提前带加餐和后续课程或游泳需要的物品。",
+    class:"固定课程时间。课间移动按教室距离预留12分钟。",
+    shopping:"补充常温豆浆/低乳糖牛奶和独立包装坚果；水果按需当天购买。"
+  };
+
+  function ev(id,day,start,end,title,type,detailKey,notes){return{id:id,day:day,start:start,end:end,title:title,type:type,detailKey:detailKey,notes:notes||""};}
+  function defaults(){
+    return[
+      ev("mon-class",0,"10:10","11:50","管理运筹学","class","class"),
+      ev("mon-lunch",0,"12:05","12:35","午餐","meal","lunch"),
+      ev("mon-rest",0,"13:15","13:40","午休/安静躺卧","rest","rest"),
+      ev("mon-snack",0,"15:30","15:45","训练加餐","meal","snack"),
+      ev("mon-a",0,"16:20","17:20","力量 A","exercise","strengthA"),
+      ev("mon-dinner",0,"17:40","18:20","晚餐","meal","dinner"),
+      ev("tue-class",1,"10:10","11:50","全球营销","class","class"),
+      ev("tue-lunch",1,"12:05","12:35","午餐","meal","lunch"),
+      ev("tue-rest",1,"13:15","13:40","午休/安静躺卧","rest","rest"),
+      ev("tue-snack",1,"16:00","16:15","游泳前加餐","meal","snack"),
+      ev("tue-swim",1,"16:30","18:10","体育课 · 游泳","exercise","swimming"),
+      ev("tue-dinner",1,"18:20","18:50","晚餐","meal","dinner"),
+      ev("wed-class",2,"10:10","11:50","管理运筹学","class","class"),
+      ev("wed-lunch",2,"12:05","12:35","午餐","meal","lunch"),
+      ev("wed-rest",2,"13:15","13:40","午休/安静躺卧","rest","rest"),
+      ev("wed-snack",2,"14:40","15:00","训练加餐","meal","snack"),
+      ev("wed-b",2,"15:20","16:20","力量 B","exercise","strengthB"),
+      ev("wed-dinner",2,"17:10","17:50","晚餐","meal","dinner"),
+      ev("wed-night",2,"19:00","21:35","大数据与商业智能","class","class"),
+      ev("thu-class",3,"16:30","18:10","全球营销","class","class"),
+      ev("thu-dinner",3,"18:20","18:55","晚餐","meal","dinner"),
+      ev("fri-class1",4,"10:10","11:50","社会心理学","class","class"),
+      ev("fri-lunch",4,"12:05","12:35","午餐","meal","lunch"),
+      ev("fri-rest",4,"13:15","13:40","午休/安静躺卧","rest","rest"),
+      ev("fri-snack",4,"15:40","16:00","加餐","meal","snack"),
+      ev("fri-class2",4,"16:30","18:10","战略管理","class","class"),
+      ev("fri-dinner",4,"18:15","18:45","晚餐","meal","dinner"),
+      ev("fri-night",4,"19:00","21:35","人力资源管理","class","class"),
+      ev("sat-pilates",5,"10:00","11:00","普拉提 · 优先预约","exercise","pilates"),
+      ev("sun-shop",6,"17:00","17:40","补充宿舍储备","meal","shopping")
+    ];
+  }
+
+  function beijingParts(date){
+    var parts=new Intl.DateTimeFormat("zh-CN",{
+      timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit",
+      weekday:"short",hour:"2-digit",minute:"2-digit",second:"2-digit",
+      hour12:false,hourCycle:"h23"
+    }).formatToParts(date);
+    var out={};parts.forEach(function(part){if(part.type!=="literal")out[part.type]=part.value;});return out;
+  }
+  function beijingDate(){
+    var p=beijingParts(new Date());
+    return new Date(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute),Number(p.second));
+  }
+  var now=beijingDate();
+  var state={weekStart:getMonday(now),mode:"normal",events:[],selected:null,creating:false,followCurrent:true};
+  var calendar=document.getElementById("calendar");
+  var weekLabel=document.getElementById("weekLabel");
+  var weekPicker=document.getElementById("weekPicker");
+  var backdrop=document.getElementById("sheetBackdrop");
+
+  function pad(n){return String(n).padStart(2,"0");}
+  function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+  function cloneDate(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+  function getMonday(d){
+    var x=cloneDate(d), day=x.getDay()||7;
+    x.setDate(x.getDate()-day+1);return x;
+  }
+  function addDays(d,n){var x=cloneDate(d);x.setDate(x.getDate()+n);return x;}
+  function hmToMin(v){var p=v.split(":");return Number(p[0])*60+Number(p[1]);}
+  function minToHm(m){m=Math.max(0,Math.min(1435,Math.round(m/5)*5));return pad(Math.floor(m/60))+":"+pad(m%60);}
+  function storageKey(){return"life-week-"+iso(state.weekStart);}
+  function knownMeetingInfo(){
+    for(var i=0;i<7;i++){
+      var date=iso(addDays(state.weekStart,i));
+      if(meetingDates.indexOf(date)>=0)return{day:i,date:date};
+    }
+    return null;
+  }
+  function loadWeek(){
+    var saved;
+    try{saved=JSON.parse(localStorage.getItem(storageKey())||"null");}catch(e){saved=null;}
+    state.events=saved&&Array.isArray(saved.events)?saved.events:defaults();
+    state.mode=knownMeetingInfo()?"meeting":(saved&&saved.mode?saved.mode:"normal");
+    render();
+  }
+  function saveWeek(){
+    localStorage.setItem(storageKey(),JSON.stringify({mode:state.mode,events:state.events}));
+  }
+  function meetingEvent(){
+    var info=knownMeetingInfo();
+    var day=info?info.day:1;
+    return ev("meeting",day,"14:00","16:00","组会","meeting","meeting");
+  }
+  function visibleEvents(){
+    var items=state.events.slice();
+    if(state.mode==="meeting")items.push(meetingEvent());
+    return items;
+  }
+
+  function renderHeader(){
+    var end=addDays(state.weekStart,6);
+    var bp=beijingParts(new Date()), info=knownMeetingInfo();
+    document.getElementById("beijingClock").textContent="北京时间 · "+bp.year+"年"+Number(bp.month)+"月"+Number(bp.day)+"日 "+bp.weekday+" "+bp.hour+":"+bp.minute;
+    weekLabel.textContent=state.weekStart.getFullYear()+"年 "+pad(state.weekStart.getMonth()+1)+"."+pad(state.weekStart.getDate())+" — "+pad(end.getMonth()+1)+"."+pad(end.getDate());
+    weekPicker.value=iso(state.weekStart);
+    document.getElementById("autoNote").textContent=info?("检测到 "+Number(info.date.slice(5,7))+"月"+Number(info.date.slice(8,10))+"日组会，已自动切换；仍可手动覆盖"):"修改只保存在你的当前设备";
+    var meeting=state.mode==="meeting";
+    document.getElementById("normalMode").classList.toggle("active",!meeting);
+    document.getElementById("meetingMode").classList.toggle("active",meeting);
+    document.getElementById("normalMode").setAttribute("aria-pressed",String(!meeting));
+    document.getElementById("meetingMode").setAttribute("aria-pressed",String(meeting));
+  }
+  function renderCalendar(){
+    calendar.innerHTML="";
+    var corner=document.createElement("div");corner.className="corner";calendar.appendChild(corner);
+    for(var i=0;i<7;i++){
+      var d=addDays(state.weekStart,i), head=document.createElement("div");
+      head.className="day-head"+(iso(d)===iso(now)?" today":"");
+      head.innerHTML="<strong>"+DAYS[i]+"</strong><span>"+pad(d.getMonth()+1)+"月"+pad(d.getDate())+"日</span>";
+      calendar.appendChild(head);
+    }
+    var axis=document.createElement("div");axis.className="time-axis";
+    for(var h=8;h<=22;h++){
+      var label=document.createElement("span");label.className="time-label";label.style.top=((h*60-START_MIN)/(END_MIN-START_MIN)*HEIGHT)+"px";label.textContent=pad(h)+":00";axis.appendChild(label);
+    }
+    calendar.appendChild(axis);
+    for(var day=0;day<7;day++){
+      var col=document.createElement("div");col.className="day-column";col.dataset.day=String(day);col.style.gridColumn=String(day+2);
+      col.addEventListener("dragover",onDragOver);col.addEventListener("drop",onDrop);col.addEventListener("dragleave",function(e){e.currentTarget.classList.remove("drag-over");});
+      visibleEvents().filter(function(x){return x.day===day;}).forEach(function(item){col.appendChild(eventNode(item));});
+      calendar.appendChild(col);
+    }
+  }
+  function eventNode(item){
+    var start=hmToMin(item.start),end=hmToMin(item.end),node=document.createElement("button");
+    node.className="event "+item.type;node.draggable=true;node.dataset.id=item.id;
+    node.style.top=((start-START_MIN)/(END_MIN-START_MIN)*HEIGHT)+"px";
+    node.style.height=Math.max(24,(end-start)/(END_MIN-START_MIN)*HEIGHT-2)+"px";
+    node.innerHTML="<strong>"+item.title+"</strong><small>"+item.start+"–"+item.end+"</small>";
+    node.addEventListener("click",function(){openSheet(item.id);});
+    node.addEventListener("dragstart",function(e){node.classList.add("dragging");e.dataTransfer.setData("text/plain",item.id);});
+    node.addEventListener("dragend",function(){node.classList.remove("dragging");});
+    return node;
+  }
+  function render(){renderHeader();renderCalendar();}
+  function onDragOver(e){e.preventDefault();e.currentTarget.classList.add("drag-over");}
+  function onDrop(e){
+    e.preventDefault();var col=e.currentTarget;col.classList.remove("drag-over");
+    var id=e.dataTransfer.getData("text/plain");if(id==="meeting")return;
+    var item=state.events.find(function(x){return x.id===id;});if(!item)return;
+    var rect=col.getBoundingClientRect(),ratio=(e.clientY-rect.top)/rect.height;
+    var start=Math.round((START_MIN+ratio*(END_MIN-START_MIN))/15)*15;
+    var duration=hmToMin(item.end)-hmToMin(item.start);
+    start=Math.max(START_MIN,Math.min(END_MIN-duration,start));
+    item.day=Number(col.dataset.day);item.start=minToHm(start);item.end=minToHm(start+duration);
+    saveWeek();render();
+  }
+
+  function findEvent(id){
+    if(id==="meeting")return meetingEvent();
+    return state.events.find(function(x){return x.id===id;});
+  }
+  function openSheet(id){
+    var item=findEvent(id);if(!item)return;
+    state.selected=id;state.creating=false;
+    document.getElementById("detailTitle").textContent=id==="meeting"?"组会安排":"编辑安排";
+    document.getElementById("detailTime").textContent=DAYS[item.day]+" · "+item.start+"–"+item.end;
+    document.getElementById("detailContent").textContent=item.notes||(content[item.detailKey]||"你可以修改名称、分类、日期、时间和备注。");
+    document.getElementById("editTitle").value=item.title;
+    document.getElementById("editType").value=item.type==="meeting"?"personal":item.type;
+    var select=document.getElementById("editDay");select.innerHTML="";
+    DAYS.forEach(function(name,i){var o=document.createElement("option");o.value=String(i);o.textContent=name;o.selected=i===item.day;select.appendChild(o);});
+    document.getElementById("editStart").value=item.start;
+    document.getElementById("editEnd").value=item.end;
+    document.getElementById("editNotes").value=item.notes||"";
+    ["editTitle","editType","editDay","editStart","editEnd","editNotes"].forEach(function(x){document.getElementById(x).disabled=id==="meeting";});
+    document.getElementById("saveEvent").disabled=id==="meeting";
+    document.getElementById("resetEvent").disabled=id==="meeting"||id.indexOf("custom-")===0;
+    document.getElementById("duplicateEvent").disabled=id==="meeting";
+    document.getElementById("deleteEvent").disabled=id==="meeting";
+    backdrop.hidden=false;document.getElementById("closeSheet").focus();
+  }
+  function populateDays(selectedDay){
+    var select=document.getElementById("editDay");select.innerHTML="";
+    DAYS.forEach(function(name,i){var o=document.createElement("option");o.value=String(i);o.textContent=name;o.selected=i===selectedDay;select.appendChild(o);});
+  }
+  function openCreateSheet(){
+    state.selected=null;state.creating=true;
+    var todayIndex=Math.floor((cloneDate(now)-state.weekStart)/86400000),day=todayIndex>=0&&todayIndex<7?todayIndex:0;
+    var current=hmToMin(pad(now.getHours())+":"+pad(now.getMinutes())),start=Math.ceil(current/30)*30;
+    if(start<START_MIN||start>=END_MIN)start=9*60;
+    document.getElementById("detailTitle").textContent="新增安排";
+    document.getElementById("detailTime").textContent="填写后会加入当前显示周";
+    document.getElementById("detailContent").textContent="建议只写真正需要占用时间的安排，课表会更容易阅读。";
+    document.getElementById("editTitle").value="";document.getElementById("editType").value="personal";populateDays(day);
+    document.getElementById("editStart").value=minToHm(start);document.getElementById("editEnd").value=minToHm(Math.min(start+60,END_MIN));document.getElementById("editNotes").value="";
+    ["editTitle","editType","editDay","editStart","editEnd","editNotes","saveEvent"].forEach(function(x){document.getElementById(x).disabled=false;});
+    ["resetEvent","duplicateEvent","deleteEvent"].forEach(function(x){document.getElementById(x).disabled=true;});
+    backdrop.hidden=false;setTimeout(function(){document.getElementById("editTitle").focus();},0);
+  }
+  function closeSheet(){backdrop.hidden=true;state.selected=null;state.creating=false;}
+  function saveSelected(){
+    if(state.selected==="meeting")return;
+    var title=document.getElementById("editTitle").value.trim();if(!title){alert("请先填写安排名称。");return;}
+    var start=document.getElementById("editStart").value,end=document.getElementById("editEnd").value;
+    if(!start||!end||hmToMin(end)<=hmToMin(start)){alert("结束时间需要晚于开始时间。");return;}
+    var item=state.creating?ev("custom-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),0,start,end,title,"personal","custom"):findEvent(state.selected);
+    if(!item)return;
+    item.title=title;item.type=document.getElementById("editType").value;item.day=Number(document.getElementById("editDay").value);item.start=start;item.end=end;item.notes=document.getElementById("editNotes").value.trim();
+    if(state.creating)state.events.push(item);
+    saveWeek();closeSheet();render();
+  }
+  function resetSelected(){
+    var fresh=defaults().find(function(x){return x.id===state.selected;});
+    var index=state.events.findIndex(function(x){return x.id===state.selected;});
+    if(fresh&&index>=0)state.events[index]=fresh;
+    saveWeek();closeSheet();render();
+  }
+  function duplicateSelected(){
+    var item=findEvent(state.selected);if(!item||state.selected==="meeting")return;
+    var copy=Object.assign({},item,{id:"custom-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),title:item.title+" · 副本",detailKey:"custom"});
+    var duration=hmToMin(copy.end)-hmToMin(copy.start),next=hmToMin(copy.start)+15;
+    if(next+duration<=END_MIN){copy.start=minToHm(next);copy.end=minToHm(next+duration);}
+    state.events.push(copy);saveWeek();closeSheet();render();openSheet(copy.id);
+  }
+  function deleteSelected(){
+    var item=findEvent(state.selected);if(!item||state.selected==="meeting")return;
+    if(!confirm("删除“"+item.title+"”？删除后只能通过恢复本周模板找回默认安排。"))return;
+    state.events=state.events.filter(function(x){return x.id!==item.id;});saveWeek();closeSheet();render();
+  }
+  function resetCurrentWeek(){
+    if(!confirm("恢复本周默认模板？你在这一周新增、移动和修改的安排都会被替换。"))return;
+    state.events=defaults();state.mode=knownMeetingInfo()?"meeting":"normal";saveWeek();render();
+  }
+
+  function switchTab(tab){
+    document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.toggle("active",b.dataset.tab===tab);});
+    document.getElementById("schedulePanel").hidden=tab!=="schedule";
+    document.getElementById("foodPanel").hidden=tab!=="food";
+    document.getElementById("exercisePanel").hidden=tab!=="exercise";
+  }
+  document.querySelectorAll(".tab-btn").forEach(function(b){b.addEventListener("click",function(){switchTab(b.dataset.tab);});});
+  document.getElementById("prevWeek").addEventListener("click",function(){state.followCurrent=false;state.weekStart=addDays(state.weekStart,-7);loadWeek();});
+  document.getElementById("nextWeek").addEventListener("click",function(){state.followCurrent=false;state.weekStart=addDays(state.weekStart,7);loadWeek();});
+  document.getElementById("todayBtn").addEventListener("click",function(){state.followCurrent=true;now=beijingDate();state.weekStart=getMonday(now);loadWeek();});
+  weekPicker.addEventListener("change",function(){var p=weekPicker.value.split("-");state.followCurrent=false;state.weekStart=getMonday(new Date(Number(p[0]),Number(p[1])-1,Number(p[2])));loadWeek();});
+  document.getElementById("normalMode").addEventListener("click",function(){state.mode="normal";saveWeek();render();});
+  document.getElementById("meetingMode").addEventListener("click",function(){state.mode="meeting";saveWeek();render();});
+  document.getElementById("closeSheet").addEventListener("click",closeSheet);
+  backdrop.addEventListener("click",function(e){if(e.target===backdrop)closeSheet();});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!backdrop.hidden)closeSheet();});
+  document.getElementById("saveEvent").addEventListener("click",saveSelected);
+  document.getElementById("resetEvent").addEventListener("click",resetSelected);
+  document.getElementById("duplicateEvent").addEventListener("click",duplicateSelected);
+  document.getElementById("deleteEvent").addEventListener("click",deleteSelected);
+  document.getElementById("addEvent").addEventListener("click",openCreateSheet);
+  document.getElementById("resetWeek").addEventListener("click",resetCurrentWeek);
+
+  function registerWebMCP(){
+    var mc=document.modelContext;if(!mc||!mc.registerTool)return;
+    var tools=[
+      {name:"get_week_summary",title:"读取本周安排",description:"读取当前显示周的日期、周类型和时间块。",inputSchema:{type:"object",properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:function(){return{week_start:iso(state.weekStart),mode:state.mode,events:visibleEvents()};}},
+      {name:"set_week_date",title:"切换周日期",description:"切换生活课表到包含指定日期的周。",inputSchema:{type:"object",properties:{date:{type:"string",format:"date"}},required:["date"],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:function(input){var p=input.date.split("-");state.followCurrent=false;state.weekStart=getMonday(new Date(Number(p[0]),Number(p[1])-1,Number(p[2])));loadWeek();return{week_start:iso(state.weekStart)};}},
+      {name:"set_meeting_week",title:"设置组会周",description:"在当前周显示或隐藏组会安排。",inputSchema:{type:"object",properties:{enabled:{type:"boolean"}},required:["enabled"],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:function(input){state.mode=input.enabled?"meeting":"normal";saveWeek();render();return{mode:state.mode};}},
+      {name:"move_schedule_block",title:"移动时间块",description:"修改一个已有时间块的星期、开始和结束时间。",inputSchema:{type:"object",properties:{id:{type:"string"},day:{type:"integer",minimum:0,maximum:6},start:{type:"string"},end:{type:"string"}},required:["id","day","start","end"],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:function(input){var item=state.events.find(function(x){return x.id===input.id;});if(!item)throw new Error("未找到时间块");if(hmToMin(input.end)<=hmToMin(input.start))throw new Error("结束时间必须晚于开始时间");item.day=input.day;item.start=input.start;item.end=input.end;saveWeek();render();return item;}},
+      {name:"create_schedule_block",title:"新增时间块",description:"在当前显示周新增一个生活安排。",inputSchema:{type:"object",properties:{title:{type:"string"},day:{type:"integer",minimum:0,maximum:6},start:{type:"string"},end:{type:"string"},category:{type:"string",enum:["class","meal","exercise","rest","personal"]},notes:{type:"string"}},required:["title","day","start","end"],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:function(input){if(hmToMin(input.end)<=hmToMin(input.start))throw new Error("结束时间必须晚于开始时间");var item=ev("custom-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),input.day,input.start,input.end,input.title,input.category||"personal","custom",input.notes||"");state.events.push(item);saveWeek();render();return item;}},
+      {name:"delete_schedule_block",title:"删除时间块",description:"删除当前显示周的一个时间块。",inputSchema:{type:"object",properties:{id:{type:"string"}},required:["id"],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:true,untrustedContentHint:false},execute:function(input){var before=state.events.length;state.events=state.events.filter(function(x){return x.id!==input.id;});if(state.events.length===before)throw new Error("未找到时间块");saveWeek();render();return{deleted:true,id:input.id};}}
+    ];
+    tools.forEach(function(tool){try{Promise.resolve(mc.registerTool(tool)).catch(function(){});}catch(e){}});
+  }
+  function refreshBeijingTime(){
+    var previousDay=iso(now),previousWeek=iso(getMonday(now));
+    now=beijingDate();
+    if(state.followCurrent&&iso(getMonday(now))!==previousWeek){
+      state.weekStart=getMonday(now);loadWeek();return;
+    }
+    renderHeader();
+    if(iso(now)!==previousDay)renderCalendar();
+  }
+  loadWeek();registerWebMCP();
+  setInterval(refreshBeijingTime,30000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshBeijingTime();});
+})();
+</script>
+</body>
+</html>
