@@ -106,15 +106,43 @@
     button:disabled{opacity:.45;cursor:not-allowed}
     .notice{border-left:4px solid var(--meal-line);background:#fff7ed;border-radius:10px;padding:12px 14px;color:#6f573b;line-height:1.6}
     @media(max-width:760px){
-      .top-inner{padding:13px 12px 10px}
-      .title-row{align-items:flex-start;flex-direction:column}.header-chips{justify-content:flex-start}.sleep-chip,.clock-chip{font-size:.78rem;padding:7px 9px}
-      .week-controls{grid-template-columns:42px 1fr 42px}.today-btn{grid-column:1/-1}
-      .date-wrap{justify-content:space-between}.date-wrap input{width:120px}
-      .mode-row{align-items:flex-start;flex-direction:column}
-      .tabs,main{padding-left:12px;padding-right:12px}
-      .tabs{overflow:auto}.tab-btn{white-space:nowrap}
+      body{font-size:14px}
+      .topbar{position:static;backdrop-filter:none}
+      .top-inner{padding:10px 8px 8px}
+      .title-row{flex-direction:row;align-items:center;gap:8px}
+      h1{font-size:1.08rem;white-space:nowrap}
+      .header-chips{flex:1;justify-content:flex-end;gap:4px}
+      .sleep-chip{display:none}
+      .clock-chip{font-size:.7rem;padding:5px 7px;border-radius:8px}
+      .week-controls{grid-template-columns:34px 1fr 34px auto;gap:5px;margin-top:8px}
+      .icon-btn{width:34px;min-height:34px;border-radius:9px}
+      .today-btn{grid-column:auto;min-height:34px;padding:5px 8px;font-size:.74rem}
+      .date-wrap{min-height:34px;padding:4px 7px;border-radius:9px;gap:4px}
+      .date-wrap strong{font-size:.78rem}
+      .date-wrap input{width:28px;height:26px;color:transparent;padding:0}
+      .mode-row{flex-direction:row;align-items:center;margin-top:7px;gap:7px}
+      .segment button{min-height:30px;padding:4px 8px;font-size:.75rem}
+      .save-note{font-size:.7rem;line-height:1.25;max-width:48%;text-align:right}
+      .tabs{position:sticky;top:0;z-index:18;margin-top:0;padding:6px 8px;background:var(--paper);overflow:auto}
+      .tab-btn{white-space:nowrap;min-height:34px;padding:5px 10px;font-size:.78rem}
+      main{padding:0 5px;margin:6px auto 24px}
+      .schedule-tools{margin:6px 2px;gap:6px}
+      .schedule-tools .tip{font-size:.72rem;line-height:1.25;max-width:54%}
+      .tool-actions{gap:4px}
+      .tool-actions button{min-height:32px;padding:4px 7px;font-size:.72rem;border-radius:9px}
+      .calendar-shell{border-radius:10px}
+      .calendar-scroll{max-height:none;overflow:visible}
+      .calendar{min-width:0;width:100%;grid-template-columns:28px repeat(7,minmax(0,1fr));grid-template-rows:40px 630px}
+      .corner{position:sticky;left:0}
+      .day-head{padding:4px 1px}
+      .day-head strong{font-size:.68rem}
+      .day-head span{font-size:.6rem;margin-top:2px}
+      .time-label{right:3px;font-size:.58rem}
+      .event{left:1px;right:1px;border-left-width:2px;border-radius:4px;padding:2px;box-shadow:none}
+      .event strong{font-size:.58rem;line-height:1.08;font-weight:700;word-break:break-all}
+      .event small{display:none}
       .grid,.workout-grid{grid-template-columns:1fr}
-      .calendar-scroll{max-height:72vh}
+      .sheet{padding:16px}
     }
   </style>
 </head>
@@ -329,7 +357,7 @@
 (function(){
   "use strict";
   var DAYS=["周一","周二","周三","周四","周五","周六","周日"];
-  var START_MIN=8*60, END_MIN=22*60, HEIGHT=840;
+  var START_MIN=8*60, END_MIN=22*60, HEIGHT=840, MOBILE_HEIGHT=630;
   var meetingDates=["2026-09-15","2026-09-29","2026-10-13","2026-10-27","2026-11-12","2026-11-26","2026-12-10","2026-12-24","2027-01-07"];
   var content={
     breakfast:"食堂优先：鸡蛋1～2个＋豆浆＋肉包，或鸡蛋＋豆浆＋玉米/红薯。来不及时用常温豆浆＋坚果，并在路上补鸡蛋或包子。",
@@ -411,6 +439,7 @@
   function addDays(d,n){var x=cloneDate(d);x.setDate(x.getDate()+n);return x;}
   function hmToMin(v){var p=v.split(":");return Number(p[0])*60+Number(p[1]);}
   function minToHm(m){m=Math.max(0,Math.min(1435,Math.round(m/5)*5));return pad(Math.floor(m/60))+":"+pad(m%60);}
+  function viewHeight(){return window.innerWidth<=760?MOBILE_HEIGHT:HEIGHT;}
   function storageKey(){return"life-week-"+iso(state.weekStart);}
   function knownMeetingInfo(){
     for(var i=0;i<7;i++){
@@ -454,6 +483,7 @@
     document.getElementById("meetingMode").setAttribute("aria-pressed",String(meeting));
   }
   function renderCalendar(){
+    var height=viewHeight();
     calendar.innerHTML="";
     var corner=document.createElement("div");corner.className="corner";calendar.appendChild(corner);
     for(var i=0;i<7;i++){
@@ -463,8 +493,8 @@
       calendar.appendChild(head);
     }
     var axis=document.createElement("div");axis.className="time-axis";
-    for(var h=8;h<=22;h++){
-      var label=document.createElement("span");label.className="time-label";label.style.top=((h*60-START_MIN)/(END_MIN-START_MIN)*HEIGHT)+"px";label.textContent=pad(h)+":00";axis.appendChild(label);
+    for(var h=8;h<=22;h+=(window.innerWidth<=760?2:1)){
+      var label=document.createElement("span");label.className="time-label";label.style.top=((h*60-START_MIN)/(END_MIN-START_MIN)*height)+"px";label.textContent=pad(h)+":00";axis.appendChild(label);
     }
     calendar.appendChild(axis);
     for(var day=0;day<7;day++){
@@ -474,12 +504,16 @@
       calendar.appendChild(col);
     }
   }
+  function shortTitle(item){
+    var names={"管理运筹学":"运筹","全球营销":"营销","社会心理学":"社心","战略管理":"战略","人力资源管理":"人资","大数据与商业智能":"大数据","午休/安静躺卧":"午休","训练加餐":"加餐","游泳前加餐":"加餐","体育课 · 游泳":"游泳","普拉提 · 优先预约":"普拉提","补充宿舍储备":"储备"};
+    return names[item.title]||item.title.replace(" · 优先预约","").slice(0,4);
+  }
   function eventNode(item){
-    var start=hmToMin(item.start),end=hmToMin(item.end),node=document.createElement("button");
+    var start=hmToMin(item.start),end=hmToMin(item.end),height=viewHeight(),compact=window.innerWidth<=760,label=compact?shortTitle(item):item.title,node=document.createElement("button");
     node.className="event "+item.type;node.draggable=true;node.dataset.id=item.id;
-    node.style.top=((start-START_MIN)/(END_MIN-START_MIN)*HEIGHT)+"px";
-    node.style.height=Math.max(24,(end-start)/(END_MIN-START_MIN)*HEIGHT-2)+"px";
-    node.innerHTML="<strong>"+item.title+"</strong><small>"+item.start+"–"+item.end+"</small>";
+    node.style.top=((start-START_MIN)/(END_MIN-START_MIN)*height)+"px";
+    node.style.height=Math.max(compact?10:24,(end-start)/(END_MIN-START_MIN)*height-2)+"px";
+    node.innerHTML="<strong>"+label+"</strong><small>"+item.start+"–"+item.end+"</small>";
     node.addEventListener("click",function(){openSheet(item.id);});
     node.addEventListener("dragstart",function(e){node.classList.add("dragging");e.dataTransfer.setData("text/plain",item.id);});
     node.addEventListener("dragend",function(){node.classList.remove("dragging");});
@@ -620,6 +654,8 @@
     renderHeader();
     if(iso(now)!==previousDay)renderCalendar();
   }
+  var compactView=window.innerWidth<=760;
+  window.addEventListener("resize",function(){var next=window.innerWidth<=760;if(next!==compactView){compactView=next;renderCalendar();}});
   loadWeek();registerWebMCP();
   setInterval(refreshBeijingTime,30000);
   document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshBeijingTime();});
